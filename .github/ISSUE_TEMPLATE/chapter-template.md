@@ -1,7 +1,12 @@
 ---
-name: 'Chapter Issue'
-about: '챕터 단위의 목표와 작업 범위를 정의합니다.'
+name: Chapter Issue
+about: 챕터 단위의 목표와 작업 범위를 정의합니다.
+title: "[Chapter]"
+labels: chapter
+assignees: sprout1015
+
 ---
+
 # [Chapter] 챕터 제목 작성
 
 ## 목표

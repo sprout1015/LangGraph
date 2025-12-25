@@ -4,6 +4,10 @@ version = "0.1.0"
 description = ""
 authors = ["Sprout <sproutarty@gmail.com>"]
 readme = "README.md"
+packages = [
+    { include = "langgraph_agent", from = "src" }
+]
+
 
 [tool.poetry.dependencies]
 python = "^3.11,<3.13"

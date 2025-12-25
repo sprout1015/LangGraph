@@ -4,6 +4,9 @@
 이 예제의 학습 목표를 간단히 작성한다.
 - Parent Chapter: #<이슈번호>
 
+## 브랜치
+`feature/<chapter-issue-number>-<chapter-slug>/<example-issue-number><example-slug>`
+
 ## 작업 범위
 1. [ ] 예제 코드 작성
 2. [ ] 실행 결과 확인

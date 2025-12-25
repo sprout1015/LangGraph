@@ -1,3 +1,7 @@
+---
+name: 'Example Issue'
+about: '챕터에 포함될 개별 예제를 정의합니다.'
+---
 # [Example] 예제 제목 작성
 
 ## 목표

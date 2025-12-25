@@ -1,3 +1,7 @@
+---
+name: 'Chapter Issue'
+about: '챕터 단위의 목표와 작업 범위를 정의합니다.'
+---
 # [Chapter] 챕터 제목 작성
 
 ## 목표

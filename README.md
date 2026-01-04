@@ -82,3 +82,14 @@ PR은 예제와 챕터 단위로 나누어 요청하며,
     *   모든 예제가 챕터 브랜치에 병합되면, `chapter/langchain-agent` → `develop`로 PR을 요청합니다.
     *   PR 제목은 `[Chapter] LangChain 에이전트`로 작성하고, 본문에 `Closes #1`을 추가합니다.
 9.  **최종 병합**: 최종 리뷰 후 `develop`에 병합하고, 릴리즈 시점에 `main` 브랜치에 병합합니다.
+
+<br>
+
+## 📂 디렉토리 구조 (Directory Structure)
+
+- 각 챕터는 최상위 폴더로 구성됩니다 (예: `langgraph_agent/`).
+- 챕터 폴더 내의 `README.md` 파일은 해당 챕터의 개요와 예제 목록을 포함합니다.
+- 각 예제는 챕터 폴더 내의 하위 디렉토리 또는 `PRJ_` 접두사를 가진 파일로 관리됩니다.
+  - 복잡한 예제나 문서가 여러 개인 경우: 하위 디렉토리 생성 (예: `05-tool-calling-lifecycle/`)
+  - 단일 파일 예제: `PRJ_` 접두사 사용 (예: `PRJ_01_...ipynb`)
+

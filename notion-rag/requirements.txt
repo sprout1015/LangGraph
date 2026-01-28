@@ -1,0 +1,42 @@
+# ===========================================
+# Notion RAG System Dependencies
+# ===========================================
+
+# Phase 1-3: API-based RAG
+# -------------------------------------------
+
+# LangChain Core
+langchain>=0.1.0
+langchain-openai
+langchain-anthropic
+langchain-community
+
+# Vector Database
+chromadb
+
+# Notion Integration
+notion-client
+
+# Utilities
+python-dotenv
+tiktoken
+
+# Development
+jupyter
+ipykernel
+
+# ===========================================
+# Phase 4: Local LLM (uncomment when needed)
+# -------------------------------------------
+# transformers>=4.36.0
+# torch>=2.1.0
+# accelerate
+# bitsandbytes
+# sentence-transformers
+
+# ===========================================
+# Phase 5: LoRA Tuning (uncomment when needed)
+# -------------------------------------------
+# peft
+# datasets
+# trl

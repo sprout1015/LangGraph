@@ -10,9 +10,12 @@ langchain>=0.1.0
 langchain-openai
 langchain-anthropic
 langchain-community
+langchain-experimental
 
 # Vector Database
 chromadb
+langchain-postgres
+psycopg[binary]
 
 # Notion Integration
 notion-client
@@ -20,6 +23,9 @@ notion-client
 # Utilities
 python-dotenv
 tiktoken
+
+# Web UI
+gradio>=4.0
 
 # Development
 jupyter

@@ -41,6 +41,22 @@ CONVERSATIONAL_RAG_PROMPT = """다음 대화 기록과 컨텍스트를 참고하
 답변:"""
 
 
+def _build_notion_url(page_id: str) -> str:
+    """Notion 페이지 ID에서 URL을 생성합니다."""
+    if not page_id:
+        return ""
+    return f"https://notion.so/{page_id.replace('-', '')}"
+
+
+def _to_str(value) -> str:
+    """메타데이터 값을 문자열로 변환합니다 (리스트/None 대응)."""
+    if value is None:
+        return ""
+    if isinstance(value, list):
+        return ", ".join(str(v) for v in value)
+    return str(value)
+
+
 def format_docs(docs: List[Document]) -> str:
     """Document 리스트를 문자열로 포맷팅"""
     formatted = []
@@ -110,7 +126,7 @@ class RAGChain:
 
     def invoke_with_sources(self, question: str) -> Dict[str, Any]:
         """
-        답변과 함께 참조 문서도 반환
+        답변과 함께 참조 문서도 반환 (retriever 1회 호출)
 
         Args:
             question: 사용자 질문
@@ -118,18 +134,23 @@ class RAGChain:
         Returns:
             {"answer": 답변, "sources": 참조 문서 리스트}
         """
-        # 먼저 관련 문서 검색
+        # 1회 검색으로 문서 조회 + 답변 생성
         docs = self.retriever.invoke(question)
+        context = format_docs(docs)
 
-        # 답변 생성
-        answer = self.chain.invoke(question)
+        prompt = ChatPromptTemplate.from_template(self.prompt_template)
+        answer = (prompt | self.llm | StrOutputParser()).invoke(
+            {"context": context, "question": question}
+        )
 
         return {
             "answer": answer,
             "sources": [
                 {
                     "title": doc.metadata.get("title", "Unknown"),
-                    "content": doc.page_content[:200] + "..."
+                    "content": doc.page_content[:200] + "...",
+                    "category": _to_str(doc.metadata.get("카테고리")),
+                    "url": _build_notion_url(doc.metadata.get("id", "")),
                 }
                 for doc in docs
             ]

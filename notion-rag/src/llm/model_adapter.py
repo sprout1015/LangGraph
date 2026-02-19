@@ -80,14 +80,19 @@ class LLMAdapter:
         )
 
     def _create_ollama(self) -> BaseChatModel:
-        """Ollama 로컬 모델 생성 (Phase 4용)"""
+        """Ollama 로컬/원격 모델 생성 (Phase 3: base_url로 터널 지원)"""
         from langchain_community.chat_models import ChatOllama
 
         model = self.model_name or "qwen2.5:3b"
+        base_url = self.kwargs.pop(
+            "base_url",
+            os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
+        )
 
         return ChatOllama(
             model=model,
             temperature=self.temperature,
+            base_url=base_url,
             **self.kwargs
         )
 

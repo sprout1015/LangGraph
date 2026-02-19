@@ -127,17 +127,23 @@ class PostgresVectorStore:
         """
         return self.vectorstore.similarity_search_with_score(query, k=k)
 
-    def as_retriever(self, search_kwargs: Optional[dict] = None):
+    def as_retriever(self, search_kwargs: Optional[dict] = None, score_threshold: Optional[float] = None):
         """
         Retriever 인터페이스로 변환
 
         Args:
             search_kwargs: 검색 파라미터 (예: {"k": 3})
+            score_threshold: 유사도 점수 임계값 (설정 시 임계값 미만 문서 제외)
 
         Returns:
             Retriever 인스턴스
         """
         search_kwargs = search_kwargs or {"k": 4}
+        if score_threshold is not None:
+            return self.vectorstore.as_retriever(
+                search_type="similarity_score_threshold",
+                search_kwargs={**search_kwargs, "score_threshold": score_threshold},
+            )
         return self.vectorstore.as_retriever(
             search_type="similarity",
             search_kwargs=search_kwargs

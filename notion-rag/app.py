@@ -27,7 +27,7 @@ def initialize_rag_chain() -> RAGChain:
 
     # 벡터 스토어 설정 (PostgreSQL + pgvector)
     vector_store = PostgresVectorStore(embeddings, collection_name="notion_docs")
-    retriever = vector_store.as_retriever(search_kwargs={"k": 4})
+    retriever = vector_store.as_retriever(search_kwargs={"k": 4}, score_threshold=0.3)
 
     # RAG 체인 생성
     return RAGChain(llm, retriever)
@@ -62,7 +62,13 @@ def respond_with_streaming(message: str, history: list):
         source_text = "\n\n---\n**참조 문서:**\n"
         for i, src in enumerate(sources, 1):
             title = src.get("title", "Unknown")
-            source_text += f"{i}. {title}\n"
+            category = src.get("category", "")
+            url = src.get("url", "")
+            label = f"[{category}] {title}" if category else title
+            if url:
+                source_text += f"{i}. [{label}]({url})\n"
+            else:
+                source_text += f"{i}. {label}\n"
         yield partial + source_text
 
 

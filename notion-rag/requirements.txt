@@ -33,6 +33,9 @@ uvicorn[standard]
 sse-starlette
 httpx
 
+# Discord Bot
+discord.py>=2.3.0
+
 # Development
 jupyter
 ipykernel

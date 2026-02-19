@@ -56,6 +56,13 @@ models/*
 *.log
 logs/
 
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform/
+*.tfvars
+!*.tfvars.example
+
 # OS
 .DS_Store
 Thumbs.db

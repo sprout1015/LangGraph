@@ -14,15 +14,17 @@ Notion에 저장된 문서를 기반으로 질의응답이 가능한 RAG 시스�
 | 2 | PostgreSQL + pgvector 벡터 저장소 구축 | 완료 |
 | 3 | Anthropic Claude API로 RAG 테스트 | 완료 |
 | 4 | Gradio 챗봇 UI 구현 | 완료 |
-| 5 | 로컬 Qwen LLM으로 전환 | 예정 |
-| 6 | LoRA 파인튜닝 (선택) | 예정 |
+| 5 | FastAPI RAG API 서버 | 완료 |
+| 6 | Discord 봇 연동 | 완료 |
+| 7 | 로컬 Qwen LLM으로 전환 | 예정 |
+| 8 | LoRA 파인튜닝 (선택) | 예정 |
 
 ### 현재 단계
-**4단계 완료**: Gradio 챗봇 UI 구현
-- PostgreSQL + pgvector 벡터 스토어 연동 완료
-- NotionRecursiveLoader로 하위 페이지 재귀 로드 지원
-- SemanticChunker로 의미 단위 문서 분할
-- Gradio 웹 인터페이스로 실시간 질의응답 가능
+**6단계 완료**: Discord 봇 연동
+- FastAPI RAG API 서버 (`/api/query`, `/api/query/stream`, `/api/health`)
+- Discord 봇 (멘션/지정채널 응답, 2000자 분할)
+- 유사도 점수 기반 문서 필터링
+- 소스에 카테고리·Notion 원문 링크 포함
 
 ---
 
@@ -38,8 +40,15 @@ Notion에 저장된 문서를 기반으로 질의응답이 가능한 RAG 시스�
                                              ▼
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
 │   Claude    │◀───│  RAG Chain  │◀───│  Vector DB  │
-│   (LLM)     │    │  (질의)     │    │ Chroma/PG   │
+│   (LLM)     │    │  (질의)     │    │ PostgreSQL  │
 └─────────────┘    └─────────────┘    └─────────────┘
+                          │
+                    ┌─────┴─────┐
+                    ▼           ▼
+              ┌──────────┐ ┌──────────┐ ┌──────────┐
+              │ Gradio   │ │ FastAPI  │ │ Discord  │
+              │ :7860    │ │ :8000   │ │ Bot      │
+              └──────────┘ └──────────┘ └──────────┘
 ```
 
 ### 벡터 DB 옵션
@@ -159,6 +168,11 @@ POSTGRES_PORT=5433
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your-password
 POSTGRES_DB=notion_rag
+
+# Discord 봇 (선택)
+DISCORD_BOT_TOKEN=your-token
+DISCORD_CHANNEL_IDS=채널ID1,채널ID2
+RAG_API_URL=http://localhost:8000
 ```
 
 ---
@@ -176,11 +190,21 @@ pip install -r requirements.txt
 python scripts/reload_vectorstore.py
 ```
 
-### 챗봇 실행
+### 챗봇 실행 (Gradio UI)
 ```bash
 python app.py
 ```
 브라우저에서 `http://localhost:7860` 접속
+
+### FastAPI API 서버
+```bash
+uvicorn api.server:app --host 0.0.0.0 --port 8000
+```
+
+### Discord 봇
+```bash
+python -m discord_bot.bot
+```
 
 ### 노트북 실행
 ```bash
@@ -199,12 +223,22 @@ jupyter notebook
 
 ```
 notion-rag/
+├── api/
+│   ├── server.py             # FastAPI RAG API 서버
+│   └── schemas.py            # API 요청/응답 스키마
+├── discord_bot/
+│   ├── bot.py                # Discord 봇 진입점
+│   ├── rag_client.py         # RAG API 비동기 클라이언트
+│   └── formatter.py          # Discord 메시지 포맷터
 ├── src/
 │   ├── loaders/          # Notion 문서 로더 (NotionRecursiveLoader 포함)
 │   ├── embeddings/       # 임베딩 모델 관리 (OpenAI / HuggingFace)
 │   ├── vectorstore/      # 벡터 DB (PostgreSQL + pgvector)
 │   ├── llm/              # LLM 어댑터 (Claude, Qwen)
 │   └── chains/           # RAG 체인 구성
+├── infra/
+│   └── scripts/
+│       └── user_data.sh      # EC2 초기화 스크립트
 ├── scripts/
 │   └── reload_vectorstore.py  # 벡터 스토어 재구축 스크립트
 ├── notebooks/

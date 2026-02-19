@@ -27,6 +27,12 @@ tiktoken
 # Web UI
 gradio>=4.0
 
+# API Server
+fastapi>=0.104.0
+uvicorn[standard]
+sse-starlette
+httpx
+
 # Development
 jupyter
 ipykernel

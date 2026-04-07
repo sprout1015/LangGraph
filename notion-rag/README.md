@@ -16,15 +16,18 @@ Notion에 저장된 문서를 기반으로 질의응답이 가능한 RAG 시스�
 | 4 | Gradio 챗봇 UI 구현 | 완료 |
 | 5 | FastAPI RAG API 서버 | 완료 |
 | 6 | Discord 봇 연동 | 완료 |
-| 7 | 로컬 Qwen LLM으로 전환 | 예정 |
-| 8 | LoRA 파인튜닝 (선택) | 예정 |
+| 7 | 로컬 Qwen LLM으로 전환 (Ollama) | 완료 |
+| 8 | LoRA 파인튜닝 (GPU 환경) | 완료 |
+| + | RAG 평가 지표 (score_threshold 비교) | 완료 |
+| + | Prometheus + Grafana 모니터링 | 완료 |
 
 ### 현재 단계
-**6단계 완료**: Discord 봇 연동
-- FastAPI RAG API 서버 (`/api/query`, `/api/query/stream`, `/api/health`)
-- Discord 봇 (멘션/지정채널 응답, 2000자 분할)
-- 유사도 점수 기반 문서 필터링
-- 소스에 카테고리·Notion 원문 링크 포함
+**8단계 완료**: LoRA 파인튜닝 파이프라인 및 모니터링 체계 구축
+- RAG 평가 스크립트 (`scripts/evaluate_rag.py`) — score_threshold 0.0/0.3/0.5 자동 비교, LLM-as-judge faithfulness 채점
+- Prometheus + Grafana 모니터링 — `/metrics` 엔드포인트, 9개 패널 대시보드 자동 프로비저닝
+- Ollama 로컬 LLM 전환 — `LLM_PROVIDER` 환경변수로 anthropic/ollama/openai 동적 선택
+- Claude vs Qwen 응답 품질 비교 노트북 (`notebooks/03_local_llm.ipynb`)
+- LoRA 파인튜닝 파이프라인 (`notebooks/04_lora_tuning.ipynb`) — CPU 데이터 준비 + GPU QLoRA 학습 단계 분리
 
 ---
 
@@ -214,8 +217,8 @@ jupyter notebook
 ### 권장 노트북 순서
 1. `01_notion_loader.ipynb` - Notion API 연결 테스트
 2. `02_notion_rag.ipynb` - 전체 RAG 파이프라인
-3. `03_local_llm.ipynb` - 로컬 LLM 연동 (5단계)
-4. `04_lora_tuning.ipynb` - 파인튜닝 (6단계)
+3. `03_local_llm.ipynb` - Claude vs Qwen 응답 품질 비교 (7단계)
+4. `04_lora_tuning.ipynb` - LoRA 파인튜닝 파이프라인 (8단계, GPU 필수)
 
 ---
 

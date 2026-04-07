@@ -18,12 +18,17 @@ load_dotenv()
 
 
 def initialize_rag_chain() -> RAGChain:
-    """RAG 체인 초기화"""
-    # LLM 설정 (Anthropic Claude)
-    llm = LLMAdapter(provider="anthropic", temperature=0).llm
+    """RAG 체인 초기화 (환경변수로 LLM/임베딩 제공자 선택)"""
+    # LLM 설정 — LLM_PROVIDER 환경변수로 선택 (기본: anthropic)
+    # 선택지: anthropic | ollama | openai
+    llm_provider = os.getenv("LLM_PROVIDER", "anthropic")
+    llm = LLMAdapter(provider=llm_provider, temperature=0).llm
+    print(f"LLM 제공자: {llm_provider}")
 
-    # 임베딩 설정 (OpenAI - 고품질)
-    embeddings = EmbeddingManager(provider="openai").embeddings
+    # 임베딩 설정 — OPENAI_API_KEY 있으면 OpenAI, 없으면 HuggingFace 로컬
+    embedding_provider = "openai" if os.getenv("OPENAI_API_KEY") else "huggingface"
+    embeddings = EmbeddingManager(provider=embedding_provider).embeddings
+    print(f"임베딩 제공자: {embedding_provider}")
 
     # 벡터 스토어 설정 (PostgreSQL + pgvector)
     vector_store = PostgresVectorStore(embeddings, collection_name="notion_docs")

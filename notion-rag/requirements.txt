@@ -36,22 +36,25 @@ httpx
 # Discord Bot
 discord.py>=2.3.0
 
+# Monitoring
+prometheus-client>=0.20.0
+
 # Development
 jupyter
 ipykernel
 
 # ===========================================
-# Phase 4: Local LLM (uncomment when needed)
+# Phase 7: Local LLM (uncomment when needed)
 # -------------------------------------------
 # transformers>=4.36.0
 # torch>=2.1.0
 # accelerate
-# bitsandbytes
 # sentence-transformers
 
 # ===========================================
-# Phase 5: LoRA Tuning (uncomment when needed)
+# Phase 8: LoRA Tuning - GPU 환경에서 uncomment
 # -------------------------------------------
-# peft
-# datasets
-# trl
+# bitsandbytes>=0.43.0
+# peft>=0.10.0
+# datasets>=2.18.0
+# trl>=0.8.0

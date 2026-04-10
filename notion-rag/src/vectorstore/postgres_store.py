@@ -96,7 +96,8 @@ class PostgresVectorStore:
     def similarity_search(
         self,
         query: str,
-        k: int = 4
+        k: int = 4,
+        filter: Optional[dict] = None,
     ) -> List[Document]:
         """
         유사도 검색
@@ -104,16 +105,18 @@ class PostgresVectorStore:
         Args:
             query: 검색 쿼리
             k: 반환할 문서 수
+            filter: 메타데이터 필터 (예: {"카테고리": {"$eq": "백엔드"}})
 
         Returns:
             가장 유사한 Document 리스트
         """
-        return self.vectorstore.similarity_search(query, k=k)
+        return self.vectorstore.similarity_search(query, k=k, filter=filter)
 
     def similarity_search_with_score(
         self,
         query: str,
-        k: int = 4
+        k: int = 4,
+        filter: Optional[dict] = None,
     ) -> List[Tuple[Document, float]]:
         """
         유사도 점수와 함께 검색
@@ -121,11 +124,12 @@ class PostgresVectorStore:
         Args:
             query: 검색 쿼리
             k: 반환할 문서 수
+            filter: 메타데이터 필터 (예: {"카테고리": {"$eq": "백엔드"}})
 
         Returns:
             (Document, 점수) 튜플 리스트
         """
-        return self.vectorstore.similarity_search_with_score(query, k=k)
+        return self.vectorstore.similarity_search_with_score(query, k=k, filter=filter)
 
     def as_retriever(self, search_kwargs: Optional[dict] = None, score_threshold: Optional[float] = None):
         """

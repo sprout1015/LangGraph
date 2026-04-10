@@ -21,87 +21,117 @@ Notion에 저장된 문서를 기반으로 질의응답이 가능한 RAG 시스�
 | + | RAG 평가 지표 (score_threshold 비교) | 완료 |
 | + | Prometheus + Grafana 모니터링 | 완료 |
 
-### 현재 단계
-**8단계 완료**: LoRA 파인튜닝 파이프라인 및 모니터링 체계 구축
-- RAG 평가 스크립트 (`scripts/evaluate_rag.py`) — score_threshold 0.0/0.3/0.5 자동 비교, LLM-as-judge faithfulness 채점
-- Prometheus + Grafana 모니터링 — `/metrics` 엔드포인트, 9개 패널 대시보드 자동 프로비저닝
-- Ollama 로컬 LLM 전환 — `LLM_PROVIDER` 환경변수로 anthropic/ollama/openai 동적 선택
-- Claude vs Qwen 응답 품질 비교 노트북 (`notebooks/03_local_llm.ipynb`)
-- LoRA 파인튜닝 파이프라인 (`notebooks/04_lora_tuning.ipynb`) — CPU 데이터 준비 + GPU QLoRA 학습 단계 분리
-
 ---
 
 ## 2. 시스템 아키텍처
 
-### 전체 구조
-```
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Notion    │───▶│   Loader    │───▶│  Splitter   │
-│   페이지    │    │   (API)     │    │  (청크)     │
-└─────────────┘    └─────────────┘    └─────────────┘
-                                             │
-                                             ▼
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Claude    │◀───│  RAG Chain  │◀───│  Vector DB  │
-│   (LLM)     │    │  (질의)     │    │ PostgreSQL  │
-└─────────────┘    └─────────────┘    └─────────────┘
-                          │
-                    ┌─────┴─────┐
-                    ▼           ▼
-              ┌──────────┐ ┌──────────┐ ┌──────────┐
-              │ Gradio   │ │ FastAPI  │ │ Discord  │
-              │ :7860    │ │ :8000   │ │ Bot      │
-              └──────────┘ └──────────┘ └──────────┘
-```
+### 전체 데이터 흐름
 
-### 벡터 DB 옵션
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        인덱싱 파이프라인                        │
+│                                                              │
+│  Notion API                                                  │
+│  (Database + 하위 페이지 재귀)                                 │
+│       │                                                      │
+│       ▼                                                      │
+│  NotionRecursiveLoader                                       │
+│  (블록 단위 파싱 → plain_text)                                 │
+│       │                                                      │
+│       ▼                                                      │
+│  SemanticChunker                                             │
+│  (의미 단위 분할 — percentile 95)                              │
+│       │                                                      │
+│       ▼                                                      │
+│  OpenAI Embeddings                    PostgreSQL + pgvector  │
+│  (text-embedding-3-small)  ────────▶  (notion_docs 컬렉션)   │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 
-| 옵션 | 장점 | 단점 |
-|------|------|------|
-| **ChromaDB** | 간단한 설정, 파일 기반 | 확장성 제한 |
-| **PostgreSQL + pgvector** | 운영 환경 적합, SQL 쿼리 지원 | DB 설정 필요 |
+┌──────────────────────────────────────────────────────────────┐
+│                        질의 파이프라인                          │
+│                                                              │
+│  사용자 질문                                                   │
+│       │                                                      │
+│       ▼                                                      │
+│  질문 임베딩 (OpenAI)                                          │
+│       │                                                      │
+│       ▼                                                      │
+│  pgvector 유사도 검색                                          │
+│  (score_threshold 필터링, Top-K)                              │
+│       │                                                      │
+│       ▼                                                      │
+│  RAG Chain (LCEL)                                            │
+│  컨텍스트 + 질문 → LLM                                         │
+│       │                                                      │
+│       ├─── Anthropic Claude (API)                            │
+│       └─── Qwen2.5 via Ollama (로컬)                         │
+│                                                              │
+│                    답변                                       │
+│                     │                                        │
+│       ┌─────────────┼─────────────┐                         │
+│       ▼             ▼             ▼                          │
+│  Gradio UI     FastAPI       Discord Bot                     │
+│  (:7860)       (:8000)       (WebSocket)                     │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────────────────────────┐
+│                          모니터링                              │
+│                                                              │
+│  FastAPI /metrics ──▶ Prometheus ──▶ Grafana (:3000)        │
+│  (요청수, 응답시간, 검색 문서수, 오류율 등 9개 패널)              │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
+```
 
 ### API 역할 분리
 
-> **중요**: Anthropic은 임베딩 API를 제공하지 않습니다. 각 단계별로 다른 API를 사용합니다.
+> **중요**: Anthropic은 임베딩 API를 제공하지 않습니다. 임베딩과 LLM에 각각 다른 API를 사용합니다.
 
-| 단계 | 목적 | 사용 API | 비고 |
-|------|------|----------|------|
-| 임베딩 | 문서 → 벡터 | OpenAI / HuggingFace | Anthropic은 임베딩 API 없음 |
-| LLM 생성 | 답변 생성 | **Anthropic Claude** | 추후 Qwen으로 전환 예정 |
+| 단계 | 목적 | 사용 API |
+|------|------|----------|
+| 임베딩 | 문서/질문 → 벡터 | OpenAI `text-embedding-3-small` (또는 HuggingFace) |
+| LLM 생성 | 답변 생성 | Anthropic Claude 또는 Qwen2.5 via Ollama |
 
 ---
 
-## 3. RAG 워크플로우
+## 3. 청크 전략
 
-### 3.1 인덱싱 단계 (1회 또는 주기적 실행)
+### 왜 SemanticChunker인가
 
-```
-Notion 문서 → 로드 → 청크 분할 → 임베딩 → 벡터 DB 저장
-```
+고정 크기 분할(`RecursiveCharacterTextSplitter`)은 문장 중간에서 잘려 맥락이 끊기는 문제가 있습니다.  
+`SemanticChunker`는 인접 문장 간 임베딩 유사도를 계산하여 **의미가 급격히 달라지는 지점**에서만 분할하므로,  
+하나의 청크 내 문장들이 같은 주제를 다룹니다.
 
-1. **로드**: Notion API로 문서 가져오기
-2. **청크 분할**: 500자 단위로 분할 (100자 오버랩)
-3. **임베딩**: 청크를 벡터로 변환 (OpenAI 또는 HuggingFace)
-4. **저장**: ChromaDB 또는 PostgreSQL (pgvector)에 벡터 저장
+### 설정값
 
-> 인덱싱 완료 후에는 다음 업데이트 전까지 Notion API를 사용하지 않습니다.
-
-### 3.2 질의 단계 (질문마다 실행)
-
-```
-질문 → 임베딩 → 벡터 DB 검색 → Top-K 문서 추출 → LLM → 답변
+```python
+SemanticChunker(
+    embeddings=OpenAIEmbeddings(),        # 유사도 계산용
+    breakpoint_threshold_type="percentile",
+    breakpoint_threshold_amount=95        # 상위 5% 유사도 급락 지점에서만 분할
+)
 ```
 
-1. **질문 임베딩**: 사용자 질문을 벡터로 변환
-2. **검색**: 벡터 DB에서 유사 문서 검색 (Top-K)
-3. **생성**: 검색된 문서 + 질문을 Claude에 전달
-4. **답변**: LLM이 컨텍스트 기반 응답 생성
+| 파라미터 | 값 | 의미 |
+|----------|-----|------|
+| `breakpoint_threshold_type` | `"percentile"` | 전체 문장 쌍 유사도 분포를 기준으로 임계값 결정 |
+| `breakpoint_threshold_amount` | `95` | 유사도 하위 5%에 해당하는 급락 지점에서만 분할 (청크 수 최소화) |
 
-### 3.3 문서 업데이트
+### 문서 로딩 전략
 
-- **수동**: 인덱싱 스크립트 재실행
-- **자동**: 스케줄러 구현 (선택사항)
+`NotionRecursiveLoader`는 데이터베이스의 최상위 페이지뿐 아니라 **하위 페이지를 재귀적으로 탐색**합니다.  
+각 블록(`heading`, `paragraph`, `bulleted_list`, `code`, `table_row` 등)을 plain text로 파싱한 뒤 SemanticChunker에 전달합니다.
+
+```
+Notion Database
+├── 페이지 A                ← NotionDBLoader로 로드
+│   ├── 하위 페이지 A-1    ← 재귀 탐색으로 추가 로드
+│   └── 하위 페이지 A-2
+└── 페이지 B
+    └── 하위 페이지 B-1
+```
 
 ---
 
@@ -136,11 +166,9 @@ abc123def456... → abc123de-f456-7890-abcd-ef1234567890
 
 | 서비스 | URL | 필수 여부 |
 |--------|-----|-----------|
-| Anthropic | https://console.anthropic.com | **필수** (LLM) |
-| OpenAI | https://platform.openai.com | 선택 (임베딩) |
+| Anthropic | https://console.anthropic.com | LLM 사용 시 필수 |
+| OpenAI | https://platform.openai.com | 임베딩 필수 (없으면 HuggingFace 사용) |
 | Notion | https://www.notion.so/my-integrations | **필수** |
-
-> OpenAI API 키가 없으면 HuggingFace의 무료 `sentence-transformers/all-MiniLM-L6-v2` 모델을 임베딩에 사용합니다.
 
 ---
 
@@ -153,19 +181,24 @@ cp .env.example .env
 
 ### .env 필수 변수
 ```bash
-# 필수: LLM (답변 생성)
-ANTHROPIC_API_KEY=sk-ant-...
-
 # 필수: Notion API
 NOTION_API_KEY=ntn_...
+NOTION_DATABASE_ID=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
 
-# 선택: 임베딩 (미설정 시 HuggingFace 사용)
+# LLM 선택 (anthropic | ollama | openai)
+LLM_PROVIDER=anthropic
+ANTHROPIC_API_KEY=sk-ant-...
+
+# 로컬 LLM 사용 시 (LLM_PROVIDER=ollama)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=qwen2.5:3b
+# Ollama 실패 시 Claude로 자동 전환 (선택)
+FALLBACK_LLM_PROVIDER=anthropic
+
+# 임베딩 (미설정 시 HuggingFace 무료 모델 사용)
 OPENAI_API_KEY=sk-...
 
-# 벡터 DB (택일)
-VECTOR_DB_TYPE=postgres  # 또는 "chroma"
-
-# PostgreSQL + pgvector 사용 시
+# PostgreSQL + pgvector
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5433
 POSTGRES_USER=postgres
@@ -209,55 +242,92 @@ uvicorn api.server:app --host 0.0.0.0 --port 8000
 python -m discord_bot.bot
 ```
 
-### 노트북 실행
+### 모니터링 (Prometheus + Grafana)
 ```bash
-jupyter notebook
+cd infra/monitoring
+docker compose -f docker-compose.monitoring.yml up -d
 ```
+Grafana: `http://localhost:3000` (admin / admin)
 
-### 권장 노트북 순서
-1. `01_notion_loader.ipynb` - Notion API 연결 테스트
-2. `02_notion_rag.ipynb` - 전체 RAG 파이프라인
-3. `03_local_llm.ipynb` - Claude vs Qwen 응답 품질 비교 (7단계)
-4. `04_lora_tuning.ipynb` - LoRA 파인튜닝 파이프라인 (8단계, GPU 필수)
+### 로컬 LLM 전환 (Ollama)
+```bash
+# 1. Ollama 설치 후 모델 다운로드
+ollama pull qwen2.5:3b
+
+# 2. .env에서 LLM_PROVIDER 변경
+LLM_PROVIDER=ollama
+
+# 3. 서버 재시작
+uvicorn api.server:app --host 0.0.0.0 --port 8000
+```
 
 ---
 
-## 7. 프로젝트 구조
+## 7. 스크립트
+
+| 스크립트 | 설명 |
+|----------|------|
+| `scripts/reload_vectorstore.py` | Notion 문서를 다시 로드하여 pgvector에 재임베딩. 문서 업데이트 시 실행 |
+| `scripts/evaluate_rag.py` | score_threshold 별 검색 품질·Faithfulness 비교 리포트 생성 |
+| `scripts/setup_ollama.sh` | Ollama 설치 및 Qwen 모델 다운로드 자동화 (Linux/Mac) |
+
+```bash
+# RAG 평가 실행 예시
+python scripts/evaluate_rag.py
+python scripts/evaluate_rag.py --thresholds 0.0 0.3 0.5 0.7
+python scripts/evaluate_rag.py --top-k 6 --output data/my_report.json
+```
+
+---
+
+## 8. 프로젝트 구조
 
 ```
 notion-rag/
 ├── api/
-│   ├── server.py             # FastAPI RAG API 서버
-│   └── schemas.py            # API 요청/응답 스키마
+│   ├── server.py             # FastAPI RAG API 서버 (/api/query, /api/query/stream, /metrics)
+│   ├── schemas.py            # API 요청/응답 스키마
+│   └── metrics.py            # Prometheus 메트릭 정의
 ├── discord_bot/
-│   ├── bot.py                # Discord 봇 진입점
-│   ├── rag_client.py         # RAG API 비동기 클라이언트
-│   └── formatter.py          # Discord 메시지 포맷터
+│   ├── bot.py                # Discord 봇 진입점 (멘션 / 지정 채널 응답)
+│   ├── rag_client.py         # FastAPI 비동기 클라이언트
+│   └── formatter.py          # 2000자 분할 메시지 포맷터
 ├── src/
-│   ├── loaders/          # Notion 문서 로더 (NotionRecursiveLoader 포함)
-│   ├── embeddings/       # 임베딩 모델 관리 (OpenAI / HuggingFace)
-│   ├── vectorstore/      # 벡터 DB (PostgreSQL + pgvector)
-│   ├── llm/              # LLM 어댑터 (Claude, Qwen)
-│   └── chains/           # RAG 체인 구성
+│   ├── loaders/
+│   │   └── notion_loader.py  # NotionRecursiveLoader (하위 페이지 재귀 + SemanticChunker)
+│   ├── embeddings/
+│   │   └── embedding_manager.py  # OpenAI / HuggingFace 임베딩 선택
+│   ├── vectorstore/
+│   │   ├── postgres_store.py     # PostgreSQL + pgvector 벡터 스토어
+│   │   └── chroma_store.py       # ChromaDB (로컬 테스트용)
+│   ├── llm/
+│   │   └── model_adapter.py      # LLMAdapter (anthropic / ollama / openai 동적 선택)
+│   └── chains/
+│       └── rag_chain.py          # RAGChain, ConversationalRAGChain (LCEL)
 ├── infra/
-│   └── scripts/
-│       └── user_data.sh      # EC2 초기화 스크립트
+│   └── monitoring/
+│       ├── docker-compose.monitoring.yml
+│       ├── prometheus.yml
+│       └── grafana/              # 대시보드 자동 프로비저닝 (9개 패널)
 ├── scripts/
-│   └── reload_vectorstore.py  # 벡터 스토어 재구축 스크립트
-├── notebooks/
-│   ├── 01_notion_loader.ipynb
+│   ├── reload_vectorstore.py     # 벡터 스토어 재구축
+│   ├── evaluate_rag.py           # RAG 평가 (score_threshold 비교)
+│   └── setup_ollama.sh           # Ollama 환경 자동 설치
+├── notebooks/                    # 학습용 노트북 (참고 자료)
+│   ├── 01_langchain_basics.ipynb
 │   ├── 02_notion_rag.ipynb
-│   ├── 03_local_llm.ipynb
-│   └── 04_lora_tuning.ipynb
-├── app.py                # Gradio 챗봇 UI
+│   ├── 03_local_llm.ipynb        # Claude vs Qwen 응답 품질 비교
+│   └── 04_lora_tuning.ipynb      # QLoRA 파인튜닝 파이프라인 (GPU 필수)
+├── data/
+│   └── eval_dataset.json         # RAG 평가 데이터셋
+├── app.py                        # Gradio 챗봇 UI
 ├── .env.example
-├── requirements.txt
-└── README.md
+└── requirements.txt
 ```
 
 ---
 
-## 8. 문제 해결
+## 9. 문제 해결
 
 ### Notion API 오류
 - Integration Token이 올바른지 확인
@@ -266,16 +336,15 @@ notion-rag/
 
 ### 임베딩 오류
 - OpenAI 할당량 초과 시 `OPENAI_API_KEY`를 삭제하여 HuggingFace 사용
-- HuggingFace 모델은 첫 사용 시 다운로드됨 (~100MB)
+- HuggingFace 모델은 첫 사용 시 자동 다운로드됨 (~100MB)
 
 ### LLM 오류
-- Anthropic API 키 유효성 확인
-- 모델명 확인: `claude-sonnet-4-20250514`
+- Anthropic: API 키 유효성 및 모델명 확인 (`claude-sonnet-4-20250514`)
+- Ollama: `ollama serve` 실행 후 `ollama list`로 모델 설치 확인
 
 ### PostgreSQL + pgvector 오류
 - pgvector 확장 설치 확인: `CREATE EXTENSION IF NOT EXISTS vector;`
 - 연결 확인: `psql -h localhost -p 5433 -U postgres -d notion_rag`
-- 데이터베이스 존재 확인: `CREATE DATABASE notion_rag;`
 
 ---
 

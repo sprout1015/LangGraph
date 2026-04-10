@@ -11,6 +11,7 @@ from typing import List, Optional
 class QueryRequest(BaseModel):
     """RAG 질의 요청"""
     question: str = Field(..., description="질문 텍스트", min_length=1)
+    category: str = Field(default="", description="카테고리 필터 (빈 문자열이면 전체 검색)")
 
 
 class SourceDoc(BaseModel):

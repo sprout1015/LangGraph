@@ -42,25 +42,28 @@ def initialize_rag_chain() -> RAGChain:
 rag_chain = initialize_rag_chain()
 
 
-def respond_with_streaming(message: str, history: list):
+def respond_with_streaming(message: str, history: list, category: str = ""):
     """
     스트리밍 응답 생성 및 소스 표시
 
     Args:
         message: 사용자 질문
         history: Gradio 대화 히스토리
+        category: 카테고리 필터 (빈 문자열이면 전체 검색)
 
     Yields:
         스트리밍 응답 청크
     """
+    category_filter = {"카테고리": {"$eq": category}} if category else None
+
     # 1. 스트리밍 응답 생성
     partial = ""
-    for chunk in rag_chain.stream(message):
+    for chunk in rag_chain.stream(message, filter=category_filter):
         partial += chunk
         yield partial
 
     # 2. 소스 정보 추가 조회
-    result = rag_chain.invoke_with_sources(message)
+    result = rag_chain.invoke_with_sources(message, filter=category_filter)
     sources = result.get("sources", [])
 
     if sources:
@@ -77,11 +80,22 @@ def respond_with_streaming(message: str, history: list):
         yield partial + source_text
 
 
+# 카테고리 목록 (NOTION_CATEGORIES 환경변수, 콤마 구분)
+_raw_categories = os.getenv("NOTION_CATEGORIES", "")
+_category_choices = [""] + [c.strip() for c in _raw_categories.split(",") if c.strip()]
+
 # Gradio 인터페이스 구성
 demo = gr.ChatInterface(
     fn=respond_with_streaming,
     title="Notion RAG 챗봇",
     description="Notion 문서 기반 질의응답 시스템",
+    additional_inputs=[
+        gr.Dropdown(
+            choices=_category_choices,
+            value="",
+            label="카테고리 필터 (선택사항 — 비워두면 전체 검색)",
+        )
+    ],
     examples=[
         "Spring Boot에서 JPA 설정은 어떻게 하나요?",
         "REST API URL은 어떻게 설계해야 하나요?",

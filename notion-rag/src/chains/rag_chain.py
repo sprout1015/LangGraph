@@ -91,18 +91,19 @@ class RAGChain:
 
     @property
     def chain(self):
-        """RAG 체인 반환 (지연 생성)"""
+        """RAG 체인 반환 (지연 생성, 필터 없음)"""
         if self._chain is None:
             self._chain = self._build_chain()
         return self._chain
 
-    def _build_chain(self):
+    def _build_chain(self, retriever=None):
         """LCEL로 RAG 체인 구성"""
         prompt = ChatPromptTemplate.from_template(self.prompt_template)
+        _retriever = retriever or self.retriever
 
         chain = (
             RunnableParallel(
-                context=self.retriever | format_docs,
+                context=_retriever | format_docs,
                 question=RunnablePassthrough()
             )
             | prompt
@@ -112,30 +113,45 @@ class RAGChain:
 
         return chain
 
-    def invoke(self, question: str) -> str:
+    def _get_retriever(self, filter: Optional[Dict] = None):
+        """필터가 있으면 메타데이터 필터가 적용된 임시 Retriever를 반환합니다."""
+        if filter is None:
+            return self.retriever
+        if hasattr(self.retriever, "vectorstore"):
+            search_kwargs = {**getattr(self.retriever, "search_kwargs", {"k": 4}), "filter": filter}
+            return self.retriever.vectorstore.as_retriever(
+                search_type=getattr(self.retriever, "search_type", "similarity"),
+                search_kwargs=search_kwargs,
+            )
+        return self.retriever
+
+    def invoke(self, question: str, filter: Optional[Dict] = None) -> str:
         """
         질문에 대한 답변 생성
 
         Args:
             question: 사용자 질문
+            filter: 메타데이터 필터 (예: {"카테고리": {"$eq": "백엔드"}})
 
         Returns:
             LLM이 생성한 답변
         """
-        return self.chain.invoke(question)
+        retriever = self._get_retriever(filter)
+        return self._build_chain(retriever).invoke(question)
 
-    def invoke_with_sources(self, question: str) -> Dict[str, Any]:
+    def invoke_with_sources(self, question: str, filter: Optional[Dict] = None) -> Dict[str, Any]:
         """
         답변과 함께 참조 문서도 반환 (retriever 1회 호출)
 
         Args:
             question: 사용자 질문
+            filter: 메타데이터 필터 (예: {"카테고리": {"$eq": "백엔드"}})
 
         Returns:
             {"answer": 답변, "sources": 참조 문서 리스트}
         """
         # 1회 검색으로 문서 조회 + 답변 생성
-        docs = self.retriever.invoke(question)
+        docs = self._get_retriever(filter).invoke(question)
         context = format_docs(docs)
 
         prompt = ChatPromptTemplate.from_template(self.prompt_template)
@@ -156,17 +172,19 @@ class RAGChain:
             ]
         }
 
-    def stream(self, question: str):
+    def stream(self, question: str, filter: Optional[Dict] = None):
         """
         스트리밍 방식으로 답변 생성
 
         Args:
             question: 사용자 질문
+            filter: 메타데이터 필터 (예: {"카테고리": {"$eq": "백엔드"}})
 
         Yields:
             답변 토큰
         """
-        for chunk in self.chain.stream(question):
+        retriever = self._get_retriever(filter)
+        for chunk in self._build_chain(retriever).stream(question):
             yield chunk
 
 

@@ -6,13 +6,37 @@
 """
 
 import os
-from typing import List, Optional, Set
+import re
+import uuid
+from typing import List, Optional, Set, Tuple
 from langchain_core.documents import Document
 from langchain_community.document_loaders import NotionDBLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_experimental.text_splitter import SemanticChunker
 from langchain_openai import OpenAIEmbeddings
 from notion_client import Client
+
+# 코드 펜스 패턴 (``` ... ``` 전체를 하나의 블록으로 인식)
+_CODE_FENCE_RE = re.compile(r"```[\s\S]*?```", re.MULTILINE)
+
+
+def _protect_code_blocks(text: str) -> Tuple[str, dict]:
+    """코드 펜스를 UUID 플레이스홀더로 치환하여 SemanticChunker로부터 보호합니다."""
+    placeholders = {}
+
+    def replace(m: re.Match) -> str:
+        key = f"__CODE_{uuid.uuid4().hex}__"
+        placeholders[key] = m.group(0)
+        return key
+
+    return _CODE_FENCE_RE.sub(replace, text), placeholders
+
+
+def _restore_code_blocks(text: str, placeholders: dict) -> str:
+    """플레이스홀더를 원본 코드 펜스로 복원합니다."""
+    for key, value in placeholders.items():
+        text = text.replace(key, value)
+    return text
 
 
 class NotionDocumentLoader:
@@ -112,20 +136,24 @@ class NotionRecursiveLoader:
     """
     하위 페이지를 재귀적으로 로드하고 SemanticChunker로 의미 단위 분할하는 클래스
 
-    NotionDBLoader로 기본 문서를 로드한 후, 각 페이지의 하위 페이지를 재귀적으로 탐색합니다.
+    notion_client를 직접 사용하여 데이터베이스 페이지와 하위 페이지를 모두 로드합니다.
+    langchain_community의 NotionDBLoader는 타임아웃이 10초로 하드코딩되어 있어
+    하위 페이지가 많은 문서 로딩 시 실패할 수 있으므로 사용하지 않습니다.
     """
 
     def __init__(
         self,
         integration_token: Optional[str] = None,
         breakpoint_threshold_type: str = "percentile",
-        breakpoint_threshold_amount: float = 95
+        breakpoint_threshold_amount: float = 95,
+        timeout: int = 60,
     ):
         """
         Args:
             integration_token: 노션 Integration 토큰 (없으면 환경변수에서 로드)
             breakpoint_threshold_type: SemanticChunker 분할 기준 타입
             breakpoint_threshold_amount: 분할 임계값 (percentile의 경우 상위 N% 유사도 급락점)
+            timeout: Notion API 요청 타임아웃(초), 기본 60초
         """
         self.integration_token = integration_token or os.getenv("NOTION_API_KEY")
         if not self.integration_token:
@@ -134,7 +162,8 @@ class NotionRecursiveLoader:
                 "NOTION_API_KEY 환경변수를 설정하거나 integration_token을 전달하세요."
             )
 
-        self.client = Client(auth=self.integration_token)
+        self.timeout = timeout
+        self.client = Client(auth=self.integration_token, timeout_ms=timeout * 1000)
         self.chunker = SemanticChunker(
             embeddings=OpenAIEmbeddings(),
             breakpoint_threshold_type=breakpoint_threshold_type,
@@ -154,6 +183,10 @@ class NotionRecursiveLoader:
         """
         노션 데이터베이스의 모든 페이지를 하위 페이지 포함하여 재귀적으로 로드합니다.
 
+        NotionDBLoader로 최상위 페이지를 로드하고, notion_client로 하위 페이지를
+        재귀 탐색합니다. NotionDBLoader의 request_timeout_sec을 self.timeout으로
+        설정하여 타임아웃을 제어합니다.
+
         Args:
             database_id: 노션 데이터베이스 ID
 
@@ -162,28 +195,26 @@ class NotionRecursiveLoader:
         """
         self._loaded_page_ids.clear()
 
-        # NotionDBLoader로 기본 문서 로드
+        # NotionDBLoader로 최상위 페이지 로드 (타임아웃 설정 적용)
         base_loader = NotionDBLoader(
             integration_token=self.integration_token,
-            database_id=database_id
+            database_id=database_id,
+            request_timeout_sec=self.timeout,
         )
         base_docs = base_loader.load()
         print(f"NotionDBLoader: {len(base_docs)} documents loaded")
 
-        # 각 문서의 page_id를 추출하여 하위 페이지 탐색
         all_docs = []
         for doc in base_docs:
             page_id = doc.metadata.get("id")
             if page_id:
                 self._loaded_page_ids.add(page_id)
-                # 메타데이터에서 제목 추출 (title 또는 노션 DB 속성명 순서로 검색)
                 title = self._extract_title_from_metadata(doc.metadata)
                 doc.metadata["title"] = title
                 doc.metadata["full_title"] = title
 
             all_docs.append(doc)
 
-            # 하위 페이지 탐색
             if page_id:
                 child_docs = self._load_child_pages(page_id, title)
                 all_docs.extend(child_docs)
@@ -365,6 +396,7 @@ class NotionRecursiveLoader:
     def _blocks_to_text(self, blocks: List[dict]) -> str:
         """블록 리스트를 텍스트로 변환합니다."""
         text_parts = []
+        prev_type = None
 
         for block in blocks:
             block_type = block.get("type")
@@ -373,6 +405,13 @@ class NotionRecursiveLoader:
             text = self._extract_block_text(block_type, block_data)
             if text:
                 text_parts.append(text)
+                # 표의 첫 번째 행(헤더) 뒤에 구분선 삽입
+                if block_type == "table_row" and prev_type != "table_row":
+                    cells = block_data.get("cells", [])
+                    separator = "| " + " | ".join(["---"] * len(cells)) + " |"
+                    text_parts.append(separator)
+
+            prev_type = block_type
 
         return "\n".join(text_parts)
 
@@ -451,6 +490,9 @@ class NotionRecursiveLoader:
         """
         SemanticChunker를 사용하여 문서를 의미 단위로 분할합니다.
 
+        코드 펜스(``` ... ```)는 분할 전 플레이스홀더로 보호하고,
+        분할 후 원본 코드로 복원하여 코드 블록이 중간에 잘리지 않도록 합니다.
+
         Args:
             docs: 분할할 Document 리스트
 
@@ -463,18 +505,22 @@ class NotionRecursiveLoader:
             if not doc.page_content.strip():
                 continue
 
+            # 코드 펜스를 플레이스홀더로 보호
+            protected, placeholders = _protect_code_blocks(doc.page_content)
+
             try:
-                chunks = self.chunker.split_text(doc.page_content)
-                for i, chunk in enumerate(chunks):
-                    if chunk.strip():
-                        result.append(Document(
-                            page_content=chunk,
-                            metadata={**doc.metadata, "chunk_index": i}
-                        ))
+                chunks = self.chunker.split_text(protected)
             except Exception as e:
-                # 분할 실패 시 원본 문서 유지
                 print(f"문서 분할 실패 ({doc.metadata.get('title', 'Unknown')}): {e}")
-                result.append(doc)
+                chunks = [protected]
+
+            for i, chunk in enumerate(chunks):
+                restored = _restore_code_blocks(chunk, placeholders)
+                if restored.strip():
+                    result.append(Document(
+                        page_content=restored,
+                        metadata={**doc.metadata, "chunk_index": i}
+                    ))
 
         print(f"SemanticChunker로 분할된 청크 수: {len(result)}")
         return result

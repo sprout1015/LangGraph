@@ -121,10 +121,12 @@ async def query(request: QueryRequest):
         raise HTTPException(status_code=503, detail="RAG 체인이 초기화되지 않았습니다")
 
     t_start = time.time()
+    category_filter = {"카테고리": {"$eq": request.category}} if request.category else None
+
     try:
         # 문서 검색 (메트릭 수집용 직접 호출)
         docs_with_scores = await asyncio.to_thread(
-            vector_store.similarity_search_with_score, request.question, 10
+            vector_store.similarity_search_with_score, request.question, 10, category_filter
         )
         # 유사도 점수 기록
         for _, score in docs_with_scores:
@@ -133,7 +135,7 @@ async def query(request: QueryRequest):
         # 답변 생성 (LLM 레이턴시 측정)
         t_llm = time.time()
         result = await asyncio.to_thread(
-            rag_chain.invoke_with_sources, request.question
+            rag_chain.invoke_with_sources, request.question, category_filter
         )
         rag_llm_duration_seconds.observe(time.time() - t_llm)
 
@@ -167,12 +169,14 @@ async def query_stream(request: QueryRequest):
     if rag_chain is None:
         raise HTTPException(status_code=503, detail="RAG 체인이 초기화되지 않았습니다")
 
+    category_filter = {"카테고리": {"$eq": request.category}} if request.category else None
+
     async def event_generator():
         t_start = time.time()
         try:
             # 동기 스트림을 비동기로 래핑
             def _stream():
-                return list(rag_chain.stream(request.question))
+                return list(rag_chain.stream(request.question, filter=category_filter))
 
             chunks = await asyncio.to_thread(_stream)
             for chunk in chunks:
@@ -180,7 +184,7 @@ async def query_stream(request: QueryRequest):
 
             # 소스 정보 전송
             result = await asyncio.to_thread(
-                rag_chain.invoke_with_sources, request.question
+                rag_chain.invoke_with_sources, request.question, category_filter
             )
             sources = result.get("sources", [])
             if sources:

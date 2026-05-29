@@ -4,7 +4,7 @@ RAG 체인 모듈
 Retriever와 LLM을 연결하여 문서 기반 질의응답을 수행합니다.
 """
 
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel, BaseLLM
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
@@ -186,6 +186,105 @@ class RAGChain:
         retriever = self._get_retriever(filter)
         for chunk in self._build_chain(retriever).stream(question):
             yield chunk
+
+
+SYNTHESIS_PROMPT = """여러 하위 질문에 대한 답변을 바탕으로 원래 질문에 대한 종합 답변을 작성하세요.
+각 하위 답변의 핵심 내용을 자연스럽게 통합하고, 중복은 제거하세요.
+답변은 명확하고 구조적으로 작성하세요.
+
+원래 질문: {original_question}
+
+하위 질문과 답변:
+{sub_qa_pairs}
+
+종합 답변:"""
+
+
+def _build_synthesis_prompt(
+    original_question: str,
+    sub_queries: List[str],
+    sub_results: List[Dict[str, Any]],
+) -> str:
+    """서브쿼리 결과들로 합성 프롬프트를 구성합니다."""
+    pairs = []
+    for i, (q, r) in enumerate(zip(sub_queries, sub_results), 1):
+        pairs.append(f"[{i}] 질문: {q}\n    답변: {r['answer']}")
+    return SYNTHESIS_PROMPT.format(
+        original_question=original_question,
+        sub_qa_pairs="\n\n".join(pairs),
+    )
+
+
+class DecomposedRAGChain:
+    """쿼리 분해를 통해 복합 질문을 처리하는 RAG 체인 래퍼"""
+
+    def __init__(self, rag_chain: "RAGChain", decomposer: Any):
+        self.rag_chain = rag_chain
+        self.decomposer = decomposer
+
+    def invoke_with_sources(
+        self, question: str, filter: Optional[Dict] = None
+    ) -> Dict[str, Any]:
+        """복합 질문을 분해하여 서브쿼리별 검색 후 합성 답변을 반환합니다."""
+        sub_queries = self.decomposer.decompose(question)
+
+        if len(sub_queries) == 1:
+            result = self.rag_chain.invoke_with_sources(question, filter)
+            result["sub_queries"] = []
+            return result
+
+        sub_results = [
+            self.rag_chain.invoke_with_sources(q, filter) for q in sub_queries
+        ]
+
+        # 소스 중복 제거 (title 기준)
+        seen: set = set()
+        merged_sources: List[Dict] = []
+        for r in sub_results:
+            for s in r["sources"]:
+                if s["title"] not in seen:
+                    seen.add(s["title"])
+                    merged_sources.append(s)
+
+        # 종합 답변 합성
+        synthesis_prompt = _build_synthesis_prompt(question, sub_queries, sub_results)
+        raw = self.rag_chain.llm.invoke(synthesis_prompt)
+        answer = raw.content if hasattr(raw, "content") else str(raw)
+
+        return {
+            "answer": answer,
+            "sources": merged_sources,
+            "sub_queries": sub_queries,
+        }
+
+    def stream(self, question: str, filter: Optional[Dict] = None):
+        """복합 질문은 분해 prefix를 먼저 yield한 뒤 합성을 스트리밍합니다."""
+        sub_queries = self.decomposer.decompose(question)
+
+        if len(sub_queries) == 1:
+            yield from self.rag_chain.stream(question, filter)
+            return
+
+        # 서브쿼리 고지 prefix
+        prefix = "🔍 **복합 질문 분석:**\n"
+        for i, q in enumerate(sub_queries, 1):
+            prefix += f"  {i}. {q}\n"
+        prefix += "\n---\n\n"
+        yield prefix
+
+        # 서브결과 수집 후 합성 스트리밍
+        sub_results = [
+            self.rag_chain.invoke_with_sources(q, filter) for q in sub_queries
+        ]
+        synthesis_prompt = _build_synthesis_prompt(question, sub_queries, sub_results)
+        accumulated = prefix
+        for chunk in self.rag_chain.llm.stream(synthesis_prompt):
+            text = chunk.content if hasattr(chunk, "content") else str(chunk)
+            accumulated += text
+            yield accumulated
+
+    def invoke(self, question: str, filter: Optional[Dict] = None) -> str:
+        return self.invoke_with_sources(question, filter)["answer"]
 
 
 class ConversationalRAGChain:

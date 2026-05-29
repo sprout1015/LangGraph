@@ -26,6 +26,7 @@ class QueryResponse(BaseModel):
     """RAG 질의 응답"""
     answer: str = Field(description="LLM이 생성한 답변")
     sources: List[SourceDoc] = Field(default_factory=list, description="참조 문서 목록")
+    sub_queries: List[str] = Field(default_factory=list, description="LLM이 분해한 하위 질문 목록 (단일 질문이면 빈 리스트)")
 
 
 class HealthResponse(BaseModel):

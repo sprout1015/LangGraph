@@ -29,18 +29,18 @@ from api.metrics import (
 from src.llm import LLMAdapter
 from src.embeddings import EmbeddingManager
 from src.vectorstore import PostgresVectorStore
-from src.chains import RAGChain
+from src.chains import RAGChain, DecomposedRAGChain, QueryDecomposer
 
 # 환경 변수 로드
 load_dotenv()
 
 # 모듈 레벨 RAG 체인 (lifespan에서 초기화)
-rag_chain: RAGChain | None = None
+rag_chain: DecomposedRAGChain | None = None
 vector_store: PostgresVectorStore | None = None
 
 
-def initialize_rag_chain() -> tuple[RAGChain, PostgresVectorStore]:
-    """RAG 체인 초기화 (app.py와 동일한 패턴)"""
+def initialize_rag_chain() -> tuple[DecomposedRAGChain, PostgresVectorStore]:
+    """RAG 체인 초기화 (쿼리 분해 포함)"""
     llm_provider = os.getenv("LLM_PROVIDER", "anthropic")
     fallback_provider = os.getenv("FALLBACK_LLM_PROVIDER")
 
@@ -61,7 +61,9 @@ def initialize_rag_chain() -> tuple[RAGChain, PostgresVectorStore]:
     vs = PostgresVectorStore(embeddings, collection_name="notion_docs")
     retriever = vs.as_retriever(search_kwargs={"k": 4}, score_threshold=0.3)
 
-    return RAGChain(llm, retriever), vs
+    base_chain = RAGChain(llm, retriever)
+    decomposer = QueryDecomposer(llm)
+    return DecomposedRAGChain(base_chain, decomposer), vs
 
 
 @asynccontextmanager
@@ -156,6 +158,7 @@ async def query(request: QueryRequest):
                 )
                 for s in result.get("sources", [])
             ],
+            sub_queries=result.get("sub_queries", []),
         )
     except Exception as e:
         rag_query_total.labels(status="error", endpoint="/api/query").inc()
@@ -172,23 +175,28 @@ async def query_stream(request: QueryRequest):
     category_filter = {"카테고리": {"$eq": request.category}} if request.category else None
 
     async def event_generator():
+        import json
         t_start = time.time()
         try:
-            # 동기 스트림을 비동기로 래핑
-            def _stream():
-                return list(rag_chain.stream(request.question, filter=category_filter))
-
-            chunks = await asyncio.to_thread(_stream)
-            for chunk in chunks:
-                yield {"event": "token", "data": chunk}
-
-            # 소스 정보 전송
+            # 답변 + 소스 + 서브쿼리 일괄 조회
             result = await asyncio.to_thread(
                 rag_chain.invoke_with_sources, request.question, category_filter
             )
+
+            # 복합 질문이면 분해된 서브쿼리 먼저 전송
+            sub_queries = result.get("sub_queries", [])
+            if sub_queries:
+                yield {"event": "decompose", "data": json.dumps(sub_queries, ensure_ascii=False)}
+
+            # 답변을 토큰 단위로 스트리밍 (청크 분할)
+            answer = result.get("answer", "")
+            chunk_size = 20
+            for i in range(0, len(answer), chunk_size):
+                yield {"event": "token", "data": answer[i:i + chunk_size]}
+
+            # 소스 정보 전송
             sources = result.get("sources", [])
             if sources:
-                import json
                 yield {"event": "sources", "data": json.dumps(sources, ensure_ascii=False)}
 
             rag_query_total.labels(status="success", endpoint="/api/query/stream").inc()

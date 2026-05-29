@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from src.llm import LLMAdapter
 from src.embeddings import EmbeddingManager
 from src.vectorstore import PostgresVectorStore
-from src.chains import RAGChain
+from src.chains import RAGChain, DecomposedRAGChain, QueryDecomposer
 
 # 환경 변수 로드
 load_dotenv()
@@ -34,8 +34,10 @@ def initialize_rag_chain() -> RAGChain:
     vector_store = PostgresVectorStore(embeddings, collection_name="notion_docs")
     retriever = vector_store.as_retriever(search_kwargs={"k": 4}, score_threshold=0.3)
 
-    # RAG 체인 생성
-    return RAGChain(llm, retriever)
+    # RAG 체인 생성 (쿼리 분해 래퍼 포함)
+    base_chain = RAGChain(llm, retriever)
+    decomposer = QueryDecomposer(llm)
+    return DecomposedRAGChain(base_chain, decomposer)
 
 
 # RAG 체인 초기화
@@ -65,19 +67,28 @@ def respond_with_streaming(message: str, history: list, category: str = ""):
     # 2. 소스 정보 추가 조회
     result = rag_chain.invoke_with_sources(message, filter=category_filter)
     sources = result.get("sources", [])
+    sub_queries = result.get("sub_queries", [])
+
+    suffix = ""
+    if sub_queries:
+        suffix += "\n\n---\n**📌 분석된 하위 질문:**\n"
+        for i, q in enumerate(sub_queries, 1):
+            suffix += f"{i}. {q}\n"
 
     if sources:
-        source_text = "\n\n---\n**참조 문서:**\n"
+        suffix += "\n\n---\n**참조 문서:**\n"
         for i, src in enumerate(sources, 1):
             title = src.get("title", "Unknown")
-            category = src.get("category", "")
+            cat = src.get("category", "")
             url = src.get("url", "")
-            label = f"[{category}] {title}" if category else title
+            label = f"[{cat}] {title}" if cat else title
             if url:
-                source_text += f"{i}. [{label}]({url})\n"
+                suffix += f"{i}. [{label}]({url})\n"
             else:
-                source_text += f"{i}. {label}\n"
-        yield partial + source_text
+                suffix += f"{i}. {label}\n"
+
+    if suffix:
+        yield partial + suffix
 
 
 # 카테고리 목록 (NOTION_CATEGORIES 환경변수, 콤마 구분)

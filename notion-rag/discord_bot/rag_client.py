@@ -4,7 +4,7 @@ RAG API 비동기 클라이언트
 FastAPI 서버의 /api/query 엔드포인트를 호출합니다.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 
@@ -13,6 +13,7 @@ import httpx
 class RAGResponse:
     answer: str
     sources: list[dict]
+    sub_queries: list[str] = field(default_factory=list)
 
 
 class RAGClient:
@@ -32,6 +33,7 @@ class RAGClient:
             return RAGResponse(
                 answer=data["answer"],
                 sources=data.get("sources", []),
+                sub_queries=data.get("sub_queries", []),
             )
 
     async def health_check(self) -> bool:

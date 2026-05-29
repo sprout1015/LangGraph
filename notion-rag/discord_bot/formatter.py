@@ -7,19 +7,26 @@ Discord 메시지 포맷터
 DISCORD_MAX_LENGTH = 2000
 
 
-def format_response(answer: str, sources: list[dict]) -> list[str]:
+def format_response(
+    answer: str,
+    sources: list[dict],
+    sub_queries: list[str] | None = None,
+) -> list[str]:
     """RAG 응답을 Discord 메시지 리스트로 변환합니다.
 
     각 메시지는 2000자 이내이며, 소스는 마지막 청크에 첨부됩니다.
+    복합 질문의 경우 상단에 분석된 하위 질문 섹션을 추가합니다.
     """
+    header = _format_sub_queries(sub_queries)
     source_text = _format_sources(sources)
-    full_text = f"{answer}\n\n{source_text}" if source_text else answer
+    body = f"{header}{answer}" if header else answer
+    full_text = f"{body}\n\n{source_text}" if source_text else body
 
     if len(full_text) <= DISCORD_MAX_LENGTH:
         return [full_text]
 
     # 단락 기준으로 분할
-    chunks = _split_by_paragraphs(answer, source_text)
+    chunks = _split_by_paragraphs(body, source_text)
     total = len(chunks)
     if total == 1:
         return chunks
@@ -37,6 +44,17 @@ def format_error(error_type: str) -> str:
         "unknown": "알 수 없는 오류가 발생했습니다.",
     }
     return messages.get(error_type, messages["unknown"])
+
+
+def _format_sub_queries(sub_queries: list[str] | None) -> str:
+    """복합 질문의 하위 질문 목록을 포맷팅합니다."""
+    if not sub_queries:
+        return ""
+    lines = ["🔍 **분석된 하위 질문:**"]
+    for i, q in enumerate(sub_queries, 1):
+        lines.append(f"  {i}. {q}")
+    lines.append("")  # 본문과 구분 개행
+    return "\n".join(lines) + "\n\n"
 
 
 def _format_sources(sources: list[dict]) -> str:

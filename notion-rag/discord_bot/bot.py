@@ -86,7 +86,7 @@ async def on_message(message: discord.Message):
     async with message.channel.typing():
         try:
             result = await rag_client.query(question)
-            chunks = format_response(result.answer, result.sources)
+            chunks = format_response(result.answer, result.sources, result.sub_queries)
         except httpx.TimeoutException:
             await message.reply(format_error("timeout"))
             return

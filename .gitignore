@@ -48,3 +48,27 @@ langgraph_agent/.env
 # Gemini
 .geminiignore
 .gemini/
+
+# Claude Code
+.claude/
+
+# Local / sensitive files
+db_config.txt
+output.txt
+todo.txt
+nul
+
+# Notion RAG — backups & credentials
+notion-rag/data/backup_*.json
+notion-rag/data/backups/
+notion-rag/db_config.txt
+notion-rag/output.txt
+notion-rag/infra/
+notion-rag/nul
+
+# Portfolio files
+*.pdf
+portfolio_page_*.png
+
+# PPT Generator (별도 레포 RAGDeck으로 이동 예정)
+ppt-generator/

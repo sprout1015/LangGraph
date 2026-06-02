@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <style>
+      text { font-family: 'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+    </style>
+    <marker id="arrow-right" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#94A3B8"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#10B981"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="5" height="1080" fill="#00C9A7"/>
+
+  <!-- ===== HEADER ===== -->
+  <text x="60" y="56" font-size="13" fill="#94A3B8" letter-spacing="3" font-weight="500">PROJECT 03 - NEXT STEPS</text>
+  <text x="60" y="106" font-size="48" fill="#0F172A" font-weight="700">Notion RAG  –  다음 단계 계획</text>
+  <line x1="60" y1="122" x2="1860" y2="122" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- ===== BEFORE / AFTER COMPARISON HEADER ===== -->
+  <text x="60" y="158" font-size="15" fill="#64748B" font-weight="600">개선 전 / 후 비교 (알파-매치 학습 프로젝트 기반)</text>
+
+  <!-- ===== COMPARISON TABLE ===== -->
+  <!-- Header row -->
+  <rect x="60" y="172" width="550" height="48" fill="#F1F5F9" rx="0"/>
+  <rect x="620" y="172" width="590" height="48" fill="#FEF2F2" rx="0"/>
+  <rect x="1220" y="172" width="640" height="48" fill="#ECFDF5" rx="0"/>
+  <line x1="60" y1="172" x2="1860" y2="172" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="60" y1="220" x2="1860" y2="220" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="620" y1="172" x2="620" y2="640" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="1220" y1="172" x2="1220" y2="640" stroke="#E2E8F0" stroke-width="1"/>
+  <line x1="60" y1="640" x2="1860" y2="640" stroke="#E2E8F0" stroke-width="1"/>
+
+  <text x="335" y="203" font-size="14" fill="#475569" font-weight="700" text-anchor="middle">구분</text>
+  <text x="915" y="203" font-size="14" fill="#DC2626" font-weight="700" text-anchor="middle">BEFORE  –  현재 (6단계 완료)</text>
+  <text x="1540" y="203" font-size="14" fill="#059669" font-weight="700" text-anchor="middle">AFTER  –  목표 (7-8단계)</text>
+
+  <!-- Row 1: LLM -->
+  <rect x="60" y="220" width="550" height="70" fill="#FAFAFA"/>
+  <line x1="60" y1="290" x2="1860" y2="290" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="335" y="260" font-size="14" fill="#0F172A" font-weight="600" text-anchor="middle">LLM</text>
+  <text x="915" y="253" font-size="14" fill="#DC2626" text-anchor="middle">Claude API  (클라우드)</text>
+  <text x="915" y="275" font-size="13" fill="#94A3B8" text-anchor="middle">API 비용 발생  ·  인터넷 의존</text>
+  <text x="1540" y="253" font-size="14" fill="#059669" text-anchor="middle">Qwen 로컬 LLM  (Ollama)</text>
+  <text x="1540" y="275" font-size="13" fill="#94A3B8" text-anchor="middle">완전 오프라인  ·  API 비용 0원</text>
+
+  <!-- Row 2: 임베딩 -->
+  <rect x="60" y="290" width="550" height="70" fill="#FAFAFA"/>
+  <line x1="60" y1="360" x2="1860" y2="360" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="335" y="330" font-size="14" fill="#0F172A" font-weight="600" text-anchor="middle">임베딩</text>
+  <text x="915" y="323" font-size="14" fill="#DC2626" text-anchor="middle">OpenAI / HuggingFace 폴백</text>
+  <text x="915" y="345" font-size="13" fill="#94A3B8" text-anchor="middle">OpenAI 사용 시 비용 발생</text>
+  <text x="1540" y="323" font-size="14" fill="#059669" text-anchor="middle">HuggingFace 로컬 고정</text>
+  <text x="1540" y="345" font-size="13" fill="#94A3B8" text-anchor="middle">all-MiniLM-L6-v2 로컬 전용</text>
+
+  <!-- Row 3: 파인튜닝 -->
+  <rect x="60" y="360" width="550" height="70" fill="#FAFAFA"/>
+  <line x1="60" y1="430" x2="1860" y2="430" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="335" y="400" font-size="14" fill="#0F172A" font-weight="600" text-anchor="middle">도메인 특화</text>
+  <text x="915" y="393" font-size="14" fill="#DC2626" text-anchor="middle">없음  (일반 LLM 그대로 사용)</text>
+  <text x="915" y="415" font-size="13" fill="#94A3B8" text-anchor="middle">Notion 도메인 특화 없음</text>
+  <text x="1540" y="393" font-size="14" fill="#059669" text-anchor="middle">LoRA 파인튜닝  (8단계)</text>
+  <text x="1540" y="415" font-size="13" fill="#94A3B8" text-anchor="middle">Notion 문서 기반 QLoRA 적용</text>
+
+  <!-- Row 4: 인프라 -->
+  <rect x="60" y="430" width="550" height="70" fill="#FAFAFA"/>
+  <line x1="60" y1="500" x2="1860" y2="500" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="335" y="470" font-size="14" fill="#0F172A" font-weight="600" text-anchor="middle">인프라</text>
+  <text x="915" y="463" font-size="14" fill="#DC2626" text-anchor="middle">로컬 실행 (localhost)</text>
+  <text x="915" y="485" font-size="13" fill="#94A3B8" text-anchor="middle">24/7 운영 불가</text>
+  <text x="1540" y="463" font-size="14" fill="#059669" text-anchor="middle">AWS EC2 배포  (Terraform 준비 완료)</text>
+  <text x="1540" y="485" font-size="13" fill="#94A3B8" text-anchor="middle">24/7 운영 필요 시 infra/ 적용</text>
+
+  <!-- Row 5: 노트북 -->
+  <rect x="60" y="500" width="550" height="70" fill="#FAFAFA"/>
+  <line x1="60" y1="570" x2="1860" y2="570" stroke="#E2E8F0" stroke-width="1"/>
+  <text x="335" y="540" font-size="14" fill="#0F172A" font-weight="600" text-anchor="middle">학습 노트북</text>
+  <text x="915" y="533" font-size="14" fill="#DC2626" text-anchor="middle">01_notion_loader · 02_notion_rag</text>
+  <text x="915" y="555" font-size="13" fill="#94A3B8" text-anchor="middle">6단계까지 완료</text>
+  <text x="1540" y="533" font-size="14" fill="#059669" text-anchor="middle">03_local_llm · 04_lora_tuning</text>
+  <text x="1540" y="555" font-size="13" fill="#94A3B8" text-anchor="middle">7-8단계 구현 예정</text>
+
+  <!-- Row 6: 응답 지연 -->
+  <rect x="60" y="570" width="550" height="70" fill="#FAFAFA"/>
+  <text x="335" y="610" font-size="14" fill="#0F172A" font-weight="600" text-anchor="middle">응답 지연</text>
+  <text x="915" y="603" font-size="14" fill="#DC2626" text-anchor="middle">Claude API 네트워크 왕복 포함</text>
+  <text x="915" y="625" font-size="13" fill="#94A3B8" text-anchor="middle">외부 API 속도 의존</text>
+  <text x="1540" y="603" font-size="14" fill="#059669" text-anchor="middle">로컬 추론  (네트워크 없음)</text>
+  <text x="1540" y="625" font-size="13" fill="#94A3B8" text-anchor="middle">GPU 있을 시 빠른 응답 가능</text>
+
+  <!-- ===== BOTTOM: ROADMAP + LESSONS ===== -->
+  <line x1="960" y1="650" x2="960" y2="1048" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- LEFT: 7-8단계 로드맵 -->
+  <text x="60" y="680" font-size="15" fill="#0F172A" font-weight="700">🗺  7-8단계 구현 로드맵</text>
+
+  <!-- Step 7 -->
+  <rect x="60" y="698" width="860" height="150" fill="#EFF6FF" rx="8" stroke="#93C5FD" stroke-width="1.5"/>
+  <rect x="60" y="698" width="5" height="150" fill="#3B82F6" rx="2"/>
+  <text x="84" y="724" font-size="14" fill="#1E40AF" font-weight="700">7단계  –  Qwen 로컬 LLM 전환</text>
+  <circle cx="91" cy="750" r="3" fill="#3B82F6"/>
+  <text x="104" y="754" font-size="13" fill="#334155">Ollama 또는 Transformers 직접 로딩 방식 채택</text>
+  <circle cx="91" cy="776" r="3" fill="#3B82F6"/>
+  <text x="104" y="780" font-size="13" fill="#334155">src/llm/ 어댑터 패턴 확장  →  LLM 교체 시 RAG 체인 코드 변경 최소화</text>
+  <circle cx="91" cy="802" r="3" fill="#3B82F6"/>
+  <text x="104" y="806" font-size="13" fill="#334155">notebooks/03_local_llm.ipynb 구현  ·  Claude → Qwen 성능 비교</text>
+  <circle cx="91" cy="828" r="3" fill="#3B82F6"/>
+  <text x="104" y="832" font-size="13" fill="#334155">목표: API 비용 0원 완전 로컬 RAG 시스템 완성</text>
+
+  <!-- Step 8 -->
+  <rect x="60" y="862" width="860" height="150" fill="#F3E8FF" rx="8" stroke="#C4B5FD" stroke-width="1.5"/>
+  <rect x="60" y="862" width="5" height="150" fill="#8B5CF6" rx="2"/>
+  <text x="84" y="888" font-size="14" fill="#4C1D95" font-weight="700">8단계  –  LoRA 파인튜닝  (선택)</text>
+  <circle cx="91" cy="914" r="3" fill="#8B5CF6"/>
+  <text x="104" y="918" font-size="13" fill="#334155">Notion 문서 기반 QA 데이터셋 구성 (질문-답변 쌍 자동 생성)</text>
+  <circle cx="91" cy="940" r="3" fill="#8B5CF6"/>
+  <text x="104" y="944" font-size="13" fill="#334155">QLoRA 기법으로 4-bit 양자화 파인튜닝  →  GPU 메모리 효율 극대화</text>
+  <circle cx="91" cy="966" r="3" fill="#8B5CF6"/>
+  <text x="104" y="970" font-size="13" fill="#334155">notebooks/04_lora_tuning.ipynb 구현</text>
+  <circle cx="91" cy="992" r="3" fill="#8B5CF6"/>
+  <text x="104" y="996" font-size="13" fill="#334155">목표: 도메인 특화 Qwen 모델로 RAG 답변 품질 추가 향상</text>
+
+  <!-- RIGHT: Lessons Learned -->
+  <text x="990" y="680" font-size="15" fill="#0F172A" font-weight="700">💡  학습 포인트 (Lessons Learned)</text>
+
+  <!-- Lesson 1 -->
+  <rect x="990" y="698" width="860" height="90" fill="#F0FEFA" rx="6" stroke="#6EE7D4" stroke-width="1"/>
+  <text x="1010" y="722" font-size="13" fill="#0F766E" font-weight="700">RAG 품질은 검색 단계에서 결정된다</text>
+  <text x="1010" y="744" font-size="13" fill="#334155">LLM 선택보다 청크 분할 전략과 score_threshold 튜닝이 답변 품질에 더 큰 영향을 미침</text>
+  <text x="1010" y="766" font-size="13" fill="#334155">→ 임베딩 모델과 검색 파라미터 최적화가 RAG의 핵심 과제</text>
+
+  <!-- Lesson 2 -->
+  <rect x="990" y="800" width="860" height="90" fill="#EFF6FF" rx="6" stroke="#93C5FD" stroke-width="1"/>
+  <text x="1010" y="824" font-size="13" fill="#1E40AF" font-weight="700">인터페이스 분리로 확장성 확보</text>
+  <text x="1010" y="846" font-size="13" fill="#334155">FastAPI로 RAG를 API 서버화하면 Discord · Gradio · CLI 등 어떤 인터페이스도 HTTP로 연결 가능</text>
+  <text x="1010" y="868" font-size="13" fill="#334155">→ 단일 RAG 백엔드 + 다중 프론트엔드 패턴의 실용적 가치 확인</text>
+
+  <!-- Lesson 3 -->
+  <rect x="990" y="902" width="860" height="90" fill="#F3E8FF" rx="6" stroke="#C4B5FD" stroke-width="1"/>
+  <text x="1010" y="926" font-size="13" fill="#4C1D95" font-weight="700">로컬 LLM 전환의 현실적 장벽</text>
+  <text x="1010" y="948" font-size="13" fill="#334155">Qwen 등 오픈소스 LLM은 GPU 없을 시 추론 속도가 실용적이지 않을 수 있음</text>
+  <text x="1010" y="970" font-size="13" fill="#334155">→ 어댑터 패턴으로 Cloud API ↔ 로컬 LLM을 런타임에 교체 가능하도록 설계</text>
+
+  <!-- Lesson 4 -->
+  <rect x="990" y="1004" width="860" height="40" fill="#FEF9C3" rx="6" stroke="#FDE68A" stroke-width="1"/>
+  <text x="1420" y="1030" font-size="13" fill="#92400E" text-anchor="middle">Claude Code + SubAgent 활용으로 6단계 구현 전 구간을 AI 페어프로그래밍으로 진행</text>
+
+  <!-- Page number -->
+  <text x="1860" y="1065" font-size="13" fill="#CBD5E1" text-anchor="end">-15-</text>
+</svg>

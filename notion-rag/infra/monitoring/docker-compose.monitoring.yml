@@ -1,0 +1,61 @@
+version: "3.8"
+
+# ─────────────────────────────────────────────
+# Notion RAG 모니터링 스택
+# ─────────────────────────────────────────────
+# 실행:
+#   docker-compose -f infra/monitoring/docker-compose.monitoring.yml up -d
+#
+# 접속:
+#   Prometheus : http://localhost:9090
+#   Grafana    : http://localhost:3000  (admin / admin)
+#
+# 전제 조건:
+#   RAG API 서버가 localhost:8000 에서 실행 중이어야 합니다.
+#   uvicorn api.server:app --host 0.0.0.0 --port 8000
+# ─────────────────────────────────────────────
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: rag-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: rag-grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/rag_dashboard.json
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+
+volumes:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  monitoring:
+    driver: bridge

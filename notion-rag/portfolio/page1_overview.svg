@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" width="1920" height="1080">
+  <defs>
+    <style>
+      text { font-family: 'Pretendard', 'Noto Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; }
+    </style>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#FFFFFF"/>
+  <!-- Left accent bar -->
+  <rect x="0" y="0" width="5" height="1080" fill="#00C9A7"/>
+
+  <!-- ===== HEADER ===== -->
+  <text x="60" y="60" font-size="13" fill="#00C9A7" letter-spacing="3" font-weight="600">PROJECT 03</text>
+  <text x="60" y="138" font-size="64" fill="#0F172A" font-weight="700">Notion RAG 시스템</text>
+  <text x="60" y="176" font-size="19" fill="#64748B">Notion 문서 기반 AI 질의응답 파이프라인 구축  ·  개인 프로젝트</text>
+  <rect x="60" y="194" width="112" height="3" fill="#00C9A7"/>
+
+  <!-- ===== GOAL BOX ===== -->
+  <rect x="60" y="218" width="1800" height="130" fill="#F0FEFA" rx="4"/>
+  <rect x="60" y="218" width="5" height="130" fill="#00C9A7"/>
+  <text x="88" y="252" font-size="14" fill="#00C9A7" font-weight="700">🎯  프로젝트 목표</text>
+  <text x="88" y="284" font-size="17" fill="#1E293B" font-weight="500">"Notion에 축적된 개인 지식베이스를 AI가 검색·답변하는 RAG 시스템 구축"</text>
+  <text x="88" y="316" font-size="14" fill="#475569">Notion API로 문서 수집 → 청크 분할 → 임베딩 → pgvector 저장 → Claude LLM 답변  |  7단계: 로컬 Qwen LLM 전환  ·  8단계: LoRA 파인튜닝 예정</text>
+
+  <!-- ===== INFO ROW ===== -->
+  <line x1="60" y1="370" x2="1860" y2="370" stroke="#E2E8F0" stroke-width="1.5"/>
+  <line x1="60" y1="458" x2="1860" y2="458" stroke="#E2E8F0" stroke-width="1.5"/>
+  <line x1="660" y1="370" x2="660" y2="458" stroke="#E2E8F0" stroke-width="1.5"/>
+  <line x1="1180" y1="370" x2="1180" y2="458" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- 기간 -->
+  <text x="80" y="396" font-size="11" fill="#94A3B8" letter-spacing="2" font-weight="600">기간</text>
+  <text x="80" y="434" font-size="15" fill="#1E293B" font-weight="600">2025.02 ~ 진행 중</text>
+
+  <!-- 역할 -->
+  <text x="680" y="396" font-size="11" fill="#94A3B8" letter-spacing="2" font-weight="600">역할</text>
+  <text x="680" y="434" font-size="15" fill="#1E293B" font-weight="600">개인 프로젝트 (End-to-End 설계·구현)</text>
+
+  <!-- 기술 스택 -->
+  <text x="1200" y="396" font-size="11" fill="#94A3B8" letter-spacing="2" font-weight="600">기술 스택</text>
+  <text x="1200" y="423" font-size="14" fill="#1E293B">LangChain · LangGraph · PostgreSQL + pgvector · FastAPI</text>
+  <text x="1200" y="447" font-size="14" fill="#1E293B">Gradio · Discord.py · Claude API · HuggingFace Transformers</text>
+
+  <!-- ===== METRIC CARDS ===== -->
+  <!-- Card 1: 3채널 인터페이스 -->
+  <rect x="60" y="480" width="575" height="162" fill="#F8FAFC" rx="8" stroke="#E2E8F0" stroke-width="1.5"/>
+  <rect x="80" y="499" width="136" height="26" fill="#00C9A7" rx="13"/>
+  <text x="148" y="517" font-size="12" fill="#FFFFFF" font-weight="600" text-anchor="middle">멀티 인터페이스</text>
+  <text x="80" y="572" font-size="52" fill="#00C9A7" font-weight="700">3채널</text>
+  <text x="80" y="606" font-size="14" fill="#64748B">Gradio UI  ·  FastAPI :8000  ·  Discord Bot</text>
+  <text x="80" y="628" font-size="13" fill="#94A3B8">단일 RAG 백엔드로 3개 인터페이스 동시 서비스</text>
+
+  <!-- Card 2: 유사도 품질 제어 -->
+  <rect x="672" y="480" width="576" height="162" fill="#F8FAFC" rx="8" stroke="#E2E8F0" stroke-width="1.5"/>
+  <rect x="692" y="499" width="136" height="26" fill="#3B82F6" rx="13"/>
+  <text x="760" y="517" font-size="12" fill="#FFFFFF" font-weight="600" text-anchor="middle">유사도 품질 제어</text>
+  <text x="692" y="572" font-size="52" fill="#3B82F6" font-weight="700">필터링</text>
+  <text x="692" y="606" font-size="14" fill="#64748B">score_threshold 기반 유사도 임계값 필터링</text>
+  <text x="692" y="628" font-size="13" fill="#94A3B8">낮은 관련성 문서 제외 → 컨텍스트 품질 향상</text>
+
+  <!-- Card 3: 2종 임베딩 지원 -->
+  <rect x="1285" y="480" width="575" height="162" fill="#F8FAFC" rx="8" stroke="#E2E8F0" stroke-width="1.5"/>
+  <rect x="1305" y="499" width="136" height="26" fill="#8B5CF6" rx="13"/>
+  <text x="1373" y="517" font-size="12" fill="#FFFFFF" font-weight="600" text-anchor="middle">임베딩 유연성</text>
+  <text x="1305" y="572" font-size="52" fill="#8B5CF6" font-weight="700">2종 지원</text>
+  <text x="1305" y="606" font-size="14" fill="#64748B">OpenAI · HuggingFace 임베딩 선택 지원</text>
+  <text x="1305" y="628" font-size="13" fill="#94A3B8">API 키 없을 시 sentence-transformers 로컬 자동 사용</text>
+
+  <!-- ===== BOTTOM 2-COL ===== -->
+  <line x1="60" y1="664" x2="1860" y2="664" stroke="#E2E8F0" stroke-width="1.5"/>
+  <line x1="960" y1="664" x2="960" y2="1048" stroke="#E2E8F0" stroke-width="1.5"/>
+
+  <!-- Left: 핵심 해결 과제 -->
+  <text x="60" y="696" font-size="15" fill="#0F172A" font-weight="700">🔍  핵심 해결 과제</text>
+
+  <circle cx="77" cy="732" r="4" fill="#00C9A7"/>
+  <text x="94" y="737" font-size="14" fill="#334155">Notion API 블록 응답의 청크 분할 시 의미 단위 손실 방지 전략 수립</text>
+
+  <circle cx="77" cy="774" r="4" fill="#00C9A7"/>
+  <text x="94" y="779" font-size="14" fill="#334155">score_threshold 미적용 시 낮은 관련성 문서가 컨텍스트에 포함되는 답변 품질 저하 문제</text>
+
+  <circle cx="77" cy="816" r="4" fill="#00C9A7"/>
+  <text x="94" y="821" font-size="14" fill="#334155">이중 LLM 호출(invoke_with_sources) 제거로 응답 속도 및 비용 개선</text>
+
+  <circle cx="77" cy="858" r="4" fill="#00C9A7"/>
+  <text x="94" y="863" font-size="14" fill="#334155">OpenAI 임베딩 API 의존성 제거 → HuggingFace 로컬 모델 폴백 지원</text>
+
+  <!-- Right: 기여 범위 -->
+  <text x="990" y="696" font-size="15" fill="#0F172A" font-weight="700">📌  기여 범위</text>
+
+  <circle cx="1007" cy="732" r="4" fill="#3B82F6"/>
+  <text x="1024" y="737" font-size="14" fill="#334155">Notion Loader → 청크 분할 → 임베딩 → pgvector 저장 End-to-End 파이프라인</text>
+
+  <circle cx="1007" cy="774" r="4" fill="#3B82F6"/>
+  <text x="1024" y="779" font-size="14" fill="#334155">FastAPI RAG API 서버 (/query, /query/stream, /health) 및 Discord 봇 연동</text>
+
+  <circle cx="1007" cy="816" r="4" fill="#3B82F6"/>
+  <text x="1024" y="821" font-size="14" fill="#334155">PostgreSQL + pgvector 벡터 스토어 구축 (ChromaDB 전환 옵션 포함)</text>
+
+  <circle cx="1007" cy="858" r="4" fill="#3B82F6"/>
+  <text x="1024" y="863" font-size="14" fill="#334155">7단계 Qwen 로컬 LLM 전환 · 8단계 LoRA 파인튜닝 로드맵 수립</text>
+
+  <!-- Page number -->
+  <text x="1860" y="1065" font-size="13" fill="#CBD5E1" text-anchor="end">-12-</text>
+</svg>
